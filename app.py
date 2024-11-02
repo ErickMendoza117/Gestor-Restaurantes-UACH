@@ -137,82 +137,6 @@ class Mesa:
             cursor.close()
             connection.close()
 
-class Reserva:
-    def __init__(self, reserva_id=None, cliente_id=None, mesa_id=None, fecha_reserva=None, hora_reserva='', numero_personas=0):
-        self.reserva_id = reserva_id
-        self.cliente_id = cliente_id
-        self.mesa_id = mesa_id
-        self.fecha_reserva = fecha_reserva
-        self.hora_reserva = hora_reserva
-        self.numero_personas = numero_personas
-
-    def save(self):
-        connection = get_connection()
-        cursor = connection.cursor()
-        try:
-            # Verificar disponibilidad de la mesa
-            cursor.execute("""
-                SELECT COUNT(*) FROM Reservas
-                WHERE mesa_id=:1 AND fecha_reserva=:2 AND hora_reserva=:3 AND reserva_id != :4
-            """, (self.mesa_id, self.fecha_reserva, self.hora_reserva, self.reserva_id if self.reserva_id else -1))
-            count = cursor.fetchone()[0]
-            if count > 0:
-                messagebox.showwarning("Advertencia", "La mesa no está disponible en esa fecha y hora.")
-                return
-            if self.reserva_id is None:
-                cursor.execute("""
-                    INSERT INTO Reservas (cliente_id, mesa_id, fecha_reserva, hora_reserva, numero_personas)
-                    VALUES (:1, :2, :3, :4, :5)
-                """, (self.cliente_id, self.mesa_id, self.fecha_reserva, self.hora_reserva, self.numero_personas))
-            else:
-                cursor.execute("""
-                    UPDATE Reservas SET cliente_id=:1, mesa_id=:2, fecha_reserva=:3, hora_reserva=:4, numero_personas=:5
-                    WHERE reserva_id=:6
-                """, (self.cliente_id, self.mesa_id, self.fecha_reserva, self.hora_reserva, self.numero_personas, self.reserva_id))
-            connection.commit()
-        except Exception as e:
-            connection.rollback()
-            print(f"Error al guardar la reserva: {e}")
-            raise e
-        finally:
-            cursor.close()
-            connection.close()
-
-    def delete(self):
-        connection = get_connection()
-        cursor = connection.cursor()
-        try:
-            cursor.execute("DELETE FROM Reservas WHERE reserva_id=:1", (self.reserva_id,))
-            connection.commit()
-        except Exception as e:
-            connection.rollback()
-            print(f"Error al eliminar la reserva: {e}")
-            raise e
-        finally:
-            cursor.close()
-            connection.close()
-
-    @staticmethod
-    def get_all():
-        connection = get_connection()
-        cursor = connection.cursor()
-        try:
-            cursor.execute("""
-                SELECT r.reserva_id, c.cliente_id || ' - ' || c.nombre || ' ' || c.apellido, m.mesa_id || ' - Mesa ' || m.numero_mesa, r.fecha_reserva, r.hora_reserva, r.numero_personas
-                FROM Reservas r
-                JOIN Clientes c ON r.cliente_id = c.cliente_id
-                JOIN Mesas m ON r.mesa_id = m.mesa_id
-                ORDER BY r.reserva_id
-            """)
-            rows = cursor.fetchall()
-            return rows
-        except Exception as e:
-            print(f"Error al obtener las reservas: {e}")
-            return []
-        finally:
-            cursor.close()
-            connection.close()
-
 class Empleado:
     def __init__(self, empleado_id=None, nombre='', apellido='', cargo=''):
         self.empleado_id = empleado_id
@@ -328,6 +252,90 @@ class Menu:
             return menus
         except Exception as e:
             print(f"Error al obtener los menús: {e}")
+            return []
+        finally:
+            cursor.close()
+            connection.close()
+
+class Reserva:
+    def __init__(self, reserva_id=None, cliente_id=None, mesa_id=None, empleado_id=None, fecha_reserva=None, hora_reserva='', numero_personas=0):
+        self.reserva_id = reserva_id
+        self.cliente_id = cliente_id
+        self.mesa_id = mesa_id
+        self.empleado_id = empleado_id  # Nuevo campo
+        self.fecha_reserva = fecha_reserva
+        self.hora_reserva = hora_reserva
+        self.numero_personas = numero_personas
+
+    def save(self):
+        connection = get_connection()
+        cursor = connection.cursor()
+        try:
+            # Verificar disponibilidad de la mesa
+            cursor.execute("""
+                SELECT COUNT(*) FROM Reservas
+                WHERE mesa_id=:1 AND fecha_reserva=:2 AND hora_reserva=:3 AND reserva_id != :4
+            """, (self.mesa_id, self.fecha_reserva, self.hora_reserva, self.reserva_id if self.reserva_id else -1))
+            count = cursor.fetchone()[0]
+            if count > 0:
+                messagebox.showwarning("Advertencia", "La mesa no está disponible en esa fecha y hora.")
+                return
+            if self.reserva_id is None:
+                cursor.execute("""
+                    INSERT INTO Reservas (cliente_id, mesa_id, empleado_id, fecha_reserva, hora_reserva, numero_personas)
+                    VALUES (:1, :2, :3, :4, :5, :6)
+                """, (self.cliente_id, self.mesa_id, self.empleado_id, self.fecha_reserva, self.hora_reserva, self.numero_personas))
+            else:
+                cursor.execute("""
+                    UPDATE Reservas SET cliente_id=:1, mesa_id=:2, empleado_id=:3, fecha_reserva=:4, hora_reserva=:5, numero_personas=:6
+                    WHERE reserva_id=:7
+                """, (self.cliente_id, self.mesa_id, self.empleado_id, self.fecha_reserva, self.hora_reserva, self.numero_personas, self.reserva_id))
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            print(f"Error al guardar la reserva: {e}")
+            raise e
+        finally:
+            cursor.close()
+            connection.close()
+
+    def delete(self):
+        connection = get_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute("DELETE FROM Reservas WHERE reserva_id=:1", (self.reserva_id,))
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            print(f"Error al eliminar la reserva: {e}")
+            raise e
+        finally:
+            cursor.close()
+            connection.close()
+
+    @staticmethod
+    def get_all():
+        connection = get_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute("""
+                SELECT r.reserva_id,
+                       c.cliente_id || ' - ' || c.nombre || ' ' || c.apellido,
+                       m.mesa_id || ' - Mesa ' || m.numero_mesa,
+                       e.empleado_id || ' - ' || e.nombre || ' ' || e.apellido,
+                       r.fecha_reserva,
+                       r.hora_reserva,
+                       r.numero_personas
+                FROM Reservas r
+                JOIN Clientes c ON r.cliente_id = c.cliente_id
+                JOIN Mesas m ON r.mesa_id = m.mesa_id
+                JOIN Empleados e ON r.empleado_id = e.empleado_id
+                ORDER BY r.reserva_id
+            """)
+            rows = cursor.fetchall()
+            return rows
+        except Exception as e:
+            print(f"Error al obtener las reservas: {e}")
             return []
         finally:
             cursor.close()
@@ -756,210 +764,6 @@ class App(ctk.CTk):
         for mesa in mesas:
             self.mesas_tree.insert('', tk.END, values=(mesa.mesa_id, mesa.numero_mesa, mesa.capacidad, mesa.ubicacion))
 
-    # Métodos para Reservas
-    def setup_reservas_tab(self):
-        frame = ctk.CTkFrame(master=self.reservas_tab)
-        frame.pack(pady=20, padx=60, fill="both", expand=True)
-
-        # Campos de entrada
-        form_frame = ctk.CTkFrame(master=frame)
-        form_frame.pack(side="left", fill="y", padx=20)
-
-        ctk.CTkLabel(master=form_frame, text="Cliente:").pack(pady=5)
-        self.selected_cliente = tk.StringVar()
-        self.cliente_combobox = ctk.CTkComboBox(master=form_frame, variable=self.selected_cliente)
-        self.cliente_combobox.pack(pady=5)
-
-        ctk.CTkLabel(master=form_frame, text="Mesa:").pack(pady=5)
-        self.selected_mesa = tk.StringVar()
-        self.mesa_combobox = ctk.CTkComboBox(master=form_frame, variable=self.selected_mesa)
-        self.mesa_combobox.pack(pady=5)
-
-        ctk.CTkLabel(master=form_frame, text="Fecha Reserva (YYYY-MM-DD):").pack(pady=5)
-        self.fecha_reserva_entry = ctk.CTkEntry(master=form_frame)
-        self.fecha_reserva_entry.pack(pady=5)
-
-        ctk.CTkLabel(master=form_frame, text="Hora Reserva (HH:MM):").pack(pady=5)
-        self.hora_reserva_entry = ctk.CTkEntry(master=form_frame)
-        self.hora_reserva_entry.pack(pady=5)
-
-        ctk.CTkLabel(master=form_frame, text="Número de Personas:").pack(pady=5)
-        self.numero_personas_entry = ctk.CTkEntry(master=form_frame)
-        self.numero_personas_entry.pack(pady=5)
-
-        self.add_reserva_button = ctk.CTkButton(master=form_frame, text="Agregar Reserva", command=self.add_reserva)
-        self.add_reserva_button.pack(pady=20)
-
-        # Lista de reservas
-        list_frame = ctk.CTkFrame(master=frame)
-        list_frame.pack(side="right", fill="both", expand=True, padx=20)
-
-        self.reservas_tree = ttk.Treeview(master=list_frame, columns=("ID", "Cliente", "Mesa", "Fecha", "Hora", "Personas"), show="headings")
-        self.reservas_tree.heading("ID", text="ID")
-        self.reservas_tree.heading("Cliente", text="Cliente")
-        self.reservas_tree.heading("Mesa", text="Mesa")
-        self.reservas_tree.heading("Fecha", text="Fecha")
-        self.reservas_tree.heading("Hora", text="Hora")
-        self.reservas_tree.heading("Personas", text="Personas")
-        self.reservas_tree.pack(fill="both", expand=True)
-
-        # Botones de edición y eliminación
-        btn_frame = ctk.CTkFrame(master=form_frame)
-        btn_frame.pack(pady=10)
-
-        self.update_reserva_button = ctk.CTkButton(master=btn_frame, text="Actualizar", command=self.update_reserva)
-        self.update_reserva_button.pack(side="left", padx=5)
-
-        self.delete_reserva_button = ctk.CTkButton(master=btn_frame, text="Eliminar", command=self.delete_reserva)
-        self.delete_reserva_button.pack(side="right", padx=5)
-
-        self.load_reservas()
-        self.update_reserva_comboboxes()
-        self.reservas_tree.bind("<<TreeviewSelect>>", self.on_reserva_select)
-
-    def update_reserva_comboboxes(self):
-        clientes = Cliente.get_all()
-        mesas = Mesa.get_all()
-
-        self.cliente_combobox.configure(values=[f"{c.cliente_id} - {c.nombre} {c.apellido}" for c in clientes])
-        self.cliente_combobox.set("Seleccione un Cliente")
-
-        self.mesa_combobox.configure(values=[f"{m.mesa_id} - Mesa {m.numero_mesa}" for m in mesas])
-        self.mesa_combobox.set("Seleccione una Mesa")
-
-    def add_reserva(self):
-        cliente_str = self.selected_cliente.get()
-        mesa_str = self.selected_mesa.get()
-        fecha_reserva = self.fecha_reserva_entry.get()
-        hora_reserva = self.hora_reserva_entry.get()
-        numero_personas = self.numero_personas_entry.get()
-
-        if " - " in cliente_str:
-            cliente_id = int(cliente_str.split(" - ")[0])
-        else:
-            messagebox.showwarning("Advertencia", "Seleccione un cliente válido.")
-            return
-
-        if " - " in mesa_str:
-            mesa_id = int(mesa_str.split(" - ")[0])
-        else:
-            messagebox.showwarning("Advertencia", "Seleccione una mesa válida.")
-            return
-
-        if not fecha_reserva or not hora_reserva or not numero_personas:
-            messagebox.showwarning("Advertencia", "Todos los campos son obligatorios.")
-            return
-
-        try:
-            fecha_reserva_dt = datetime.strptime(fecha_reserva, "%Y-%m-%d").date()
-        except ValueError:
-            messagebox.showwarning("Advertencia", "Formato de fecha incorrecto. Debe ser YYYY-MM-DD.")
-            return
-
-        reserva = Reserva(cliente_id=cliente_id, mesa_id=mesa_id, fecha_reserva=fecha_reserva_dt,
-                          hora_reserva=hora_reserva, numero_personas=int(numero_personas))
-        try:
-            reserva.save()
-            messagebox.showinfo("Éxito", "Reserva agregada correctamente.")
-            self.clear_reserva_entries()
-            self.load_reservas()
-        except Exception as e:
-            messagebox.showerror("Error", f"Ocurrió un error al agregar la reserva:\n{e}")
-
-    def update_reserva(self):
-        selected_item = self.reservas_tree.focus()
-        if not selected_item:
-            messagebox.showwarning("Advertencia", "Seleccione una reserva para actualizar.")
-            return
-
-        reserva_id = self.reservas_tree.item(selected_item)['values'][0]
-
-        cliente_str = self.selected_cliente.get()
-        mesa_str = self.selected_mesa.get()
-        fecha_reserva = self.fecha_reserva_entry.get()
-        hora_reserva = self.hora_reserva_entry.get()
-        numero_personas = self.numero_personas_entry.get()
-
-        if " - " in cliente_str:
-            cliente_id = int(cliente_str.split(" - ")[0])
-        else:
-            messagebox.showwarning("Advertencia", "Seleccione un cliente válido.")
-            return
-
-        if " - " in mesa_str:
-            mesa_id = int(mesa_str.split(" - ")[0])
-        else:
-            messagebox.showwarning("Advertencia", "Seleccione una mesa válida.")
-            return
-
-        if not fecha_reserva or not hora_reserva or not numero_personas:
-            messagebox.showwarning("Advertencia", "Todos los campos son obligatorios.")
-            return
-
-        try:
-            fecha_reserva_dt = datetime.strptime(fecha_reserva, "%Y-%m-%d").date()
-        except ValueError:
-            messagebox.showwarning("Advertencia", "Formato de fecha incorrecto. Debe ser YYYY-MM-DD.")
-            return
-
-        reserva = Reserva(reserva_id=reserva_id, cliente_id=cliente_id, mesa_id=mesa_id, fecha_reserva=fecha_reserva_dt,
-                          hora_reserva=hora_reserva, numero_personas=int(numero_personas))
-        try:
-            reserva.save()
-            messagebox.showinfo("Éxito", "Reserva actualizada correctamente.")
-            self.clear_reserva_entries()
-            self.load_reservas()
-        except Exception as e:
-            messagebox.showerror("Error", f"Ocurrió un error al actualizar la reserva:\n{e}")
-
-    def delete_reserva(self):
-        selected_item = self.reservas_tree.focus()
-        if not selected_item:
-            messagebox.showwarning("Advertencia", "Seleccione una reserva para eliminar.")
-            return
-
-        reserva_id = self.reservas_tree.item(selected_item)['values'][0]
-        confirm = messagebox.askyesno("Confirmar", "¿Está seguro de eliminar esta reserva?")
-        if confirm:
-            reserva = Reserva(reserva_id=reserva_id)
-            try:
-                reserva.delete()
-                messagebox.showinfo("Éxito", "Reserva eliminada correctamente.")
-                self.clear_reserva_entries()
-                self.load_reservas()
-            except Exception as e:
-                messagebox.showerror("Error", f"Ocurrió un error al eliminar la reserva:\n{e}")
-
-    def on_reserva_select(self, event):
-        selected_item = self.reservas_tree.focus()
-        if selected_item:
-            reserva_data = self.reservas_tree.item(selected_item)['values']
-
-            self.selected_cliente.set(reserva_data[1])
-            self.selected_mesa.set(reserva_data[2])
-
-            self.fecha_reserva_entry.delete(0, tk.END)
-            self.fecha_reserva_entry.insert(0, reserva_data[3])
-            self.hora_reserva_entry.delete(0, tk.END)
-            self.hora_reserva_entry.insert(0, reserva_data[4])
-            self.numero_personas_entry.delete(0, tk.END)
-            self.numero_personas_entry.insert(0, reserva_data[5])
-
-    def clear_reserva_entries(self):
-        self.fecha_reserva_entry.delete(0, tk.END)
-        self.hora_reserva_entry.delete(0, tk.END)
-        self.numero_personas_entry.delete(0, tk.END)
-        self.cliente_combobox.set("Seleccione un Cliente")
-        self.mesa_combobox.set("Seleccione una Mesa")
-        self.reservas_tree.selection_remove(self.reservas_tree.selection())
-
-    def load_reservas(self):
-        for item in self.reservas_tree.get_children():
-            self.reservas_tree.delete(item)
-        reservas = Reserva.get_all()
-        for reserva in reservas:
-            self.reservas_tree.insert('', tk.END, values=(reserva[0], reserva[1], reserva[2], reserva[3], reserva[4], reserva[5]))
-
     # Métodos para Empleados
     def setup_empleados_tab(self):
         frame = ctk.CTkFrame(master=self.empleados_tab)
@@ -1023,6 +827,7 @@ class App(ctk.CTk):
             messagebox.showinfo("Éxito", "Empleado agregado correctamente.")
             self.clear_empleado_entries()
             self.load_empleados()
+            self.update_reserva_comboboxes()
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al agregar el empleado:\n{e}")
 
@@ -1047,6 +852,7 @@ class App(ctk.CTk):
             messagebox.showinfo("Éxito", "Empleado actualizado correctamente.")
             self.clear_empleado_entries()
             self.load_empleados()
+            self.update_reserva_comboboxes()
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al actualizar el empleado:\n{e}")
 
@@ -1065,6 +871,7 @@ class App(ctk.CTk):
                 messagebox.showinfo("Éxito", "Empleado eliminado correctamente.")
                 self.clear_empleado_entries()
                 self.load_empleados()
+                self.update_reserva_comboboxes()
             except Exception as e:
                 messagebox.showerror("Error", f"Ocurrió un error al eliminar el empleado:\n{e}")
 
@@ -1091,6 +898,236 @@ class App(ctk.CTk):
         empleados = Empleado.get_all()
         for empleado in empleados:
             self.empleados_tree.insert('', tk.END, values=(empleado.empleado_id, empleado.nombre, empleado.apellido, empleado.cargo))
+
+    # Métodos para Reservas
+    def setup_reservas_tab(self):
+        frame = ctk.CTkFrame(master=self.reservas_tab)
+        frame.pack(pady=20, padx=60, fill="both", expand=True)
+
+        # Campos de entrada
+        form_frame = ctk.CTkFrame(master=frame)
+        form_frame.pack(side="left", fill="y", padx=20)
+
+        ctk.CTkLabel(master=form_frame, text="Cliente:").pack(pady=5)
+        self.selected_cliente = ctk.StringVar()
+        self.cliente_combobox = ctk.CTkComboBox(master=form_frame, variable=self.selected_cliente)
+        self.cliente_combobox.pack(pady=5)
+
+        ctk.CTkLabel(master=form_frame, text="Mesa:").pack(pady=5)
+        self.selected_mesa = ctk.StringVar()
+        self.mesa_combobox = ctk.CTkComboBox(master=form_frame, variable=self.selected_mesa)
+        self.mesa_combobox.pack(pady=5)
+
+        ctk.CTkLabel(master=form_frame, text="Empleado:").pack(pady=5)
+        self.selected_empleado = ctk.StringVar()
+        self.empleado_combobox = ctk.CTkComboBox(master=form_frame, variable=self.selected_empleado)
+        self.empleado_combobox.pack(pady=5)
+
+        ctk.CTkLabel(master=form_frame, text="Fecha Reserva (YYYY-MM-DD):").pack(pady=5)
+        self.fecha_reserva_entry = ctk.CTkEntry(master=form_frame)
+        self.fecha_reserva_entry.pack(pady=5)
+
+        ctk.CTkLabel(master=form_frame, text="Hora Reserva (HH:MM):").pack(pady=5)
+        self.hora_reserva_entry = ctk.CTkEntry(master=form_frame)
+        self.hora_reserva_entry.pack(pady=5)
+
+        ctk.CTkLabel(master=form_frame, text="Número de Personas:").pack(pady=5)
+        self.numero_personas_entry = ctk.CTkEntry(master=form_frame)
+        self.numero_personas_entry.pack(pady=5)
+
+        self.add_reserva_button = ctk.CTkButton(master=form_frame, text="Agregar Reserva", command=self.add_reserva)
+        self.add_reserva_button.pack(pady=20)
+
+        # Lista de reservas
+        list_frame = ctk.CTkFrame(master=frame)
+        list_frame.pack(side="right", fill="both", expand=True, padx=20)
+
+        self.reservas_tree = ttk.Treeview(master=list_frame, columns=("ID", "Cliente", "Mesa", "Empleado", "Fecha", "Hora", "Personas"), show="headings")
+        self.reservas_tree.heading("ID", text="ID")
+        self.reservas_tree.heading("Cliente", text="Cliente")
+        self.reservas_tree.heading("Mesa", text="Mesa")
+        self.reservas_tree.heading("Empleado", text="Empleado")
+        self.reservas_tree.heading("Fecha", text="Fecha")
+        self.reservas_tree.heading("Hora", text="Hora")
+        self.reservas_tree.heading("Personas", text="Personas")
+        self.reservas_tree.pack(fill="both", expand=True)
+
+        # Botones de edición y eliminación
+        btn_frame = ctk.CTkFrame(master=form_frame)
+        btn_frame.pack(pady=10)
+
+        self.update_reserva_button = ctk.CTkButton(master=btn_frame, text="Actualizar", command=self.update_reserva)
+        self.update_reserva_button.pack(side="left", padx=5)
+
+        self.delete_reserva_button = ctk.CTkButton(master=btn_frame, text="Eliminar", command=self.delete_reserva)
+        self.delete_reserva_button.pack(side="right", padx=5)
+
+        self.load_reservas()
+        self.update_reserva_comboboxes()
+        self.reservas_tree.bind("<<TreeviewSelect>>", self.on_reserva_select)
+
+    def update_reserva_comboboxes(self):
+        clientes = Cliente.get_all()
+        mesas = Mesa.get_all()
+        empleados = Empleado.get_all()
+
+        self.cliente_combobox.configure(values=[f"{c.cliente_id} - {c.nombre} {c.apellido}" for c in clientes])
+        self.cliente_combobox.set("Seleccione un Cliente")
+
+        self.mesa_combobox.configure(values=[f"{m.mesa_id} - Mesa {m.numero_mesa}" for m in mesas])
+        self.mesa_combobox.set("Seleccione una Mesa")
+
+        self.empleado_combobox.configure(values=[f"{e.empleado_id} - {e.nombre} {e.apellido}" for e in empleados])
+        self.empleado_combobox.set("Seleccione un Empleado")
+
+    def add_reserva(self):
+        cliente_str = self.selected_cliente.get()
+        mesa_str = self.selected_mesa.get()
+        empleado_str = self.selected_empleado.get()
+        fecha_reserva = self.fecha_reserva_entry.get()
+        hora_reserva = self.hora_reserva_entry.get()
+        numero_personas = self.numero_personas_entry.get()
+
+        if " - " in cliente_str:
+            cliente_id = int(cliente_str.split(" - ")[0])
+        else:
+            messagebox.showwarning("Advertencia", "Seleccione un cliente válido.")
+            return
+
+        if " - " in mesa_str:
+            mesa_id = int(mesa_str.split(" - ")[0])
+        else:
+            messagebox.showwarning("Advertencia", "Seleccione una mesa válida.")
+            return
+
+        if " - " in empleado_str:
+            empleado_id = int(empleado_str.split(" - ")[0])
+        else:
+            messagebox.showwarning("Advertencia", "Seleccione un empleado válido.")
+            return
+
+        if not fecha_reserva or not hora_reserva or not numero_personas:
+            messagebox.showwarning("Advertencia", "Todos los campos son obligatorios.")
+            return
+
+        try:
+            fecha_reserva_dt = datetime.strptime(fecha_reserva, "%Y-%m-%d").date()
+        except ValueError:
+            messagebox.showwarning("Advertencia", "Formato de fecha incorrecto. Debe ser YYYY-MM-DD.")
+            return
+
+        reserva = Reserva(cliente_id=cliente_id, mesa_id=mesa_id, empleado_id=empleado_id, fecha_reserva=fecha_reserva_dt,
+                          hora_reserva=hora_reserva, numero_personas=int(numero_personas))
+        try:
+            reserva.save()
+            messagebox.showinfo("Éxito", "Reserva agregada correctamente.")
+            self.clear_reserva_entries()
+            self.load_reservas()
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error al agregar la reserva:\n{e}")
+
+    def update_reserva(self):
+        selected_item = self.reservas_tree.focus()
+        if not selected_item:
+            messagebox.showwarning("Advertencia", "Seleccione una reserva para actualizar.")
+            return
+
+        reserva_id = self.reservas_tree.item(selected_item)['values'][0]
+
+        cliente_str = self.selected_cliente.get()
+        mesa_str = self.selected_mesa.get()
+        empleado_str = self.selected_empleado.get()
+        fecha_reserva = self.fecha_reserva_entry.get()
+        hora_reserva = self.hora_reserva_entry.get()
+        numero_personas = self.numero_personas_entry.get()
+
+        if " - " in cliente_str:
+            cliente_id = int(cliente_str.split(" - ")[0])
+        else:
+            messagebox.showwarning("Advertencia", "Seleccione un cliente válido.")
+            return
+
+        if " - " in mesa_str:
+            mesa_id = int(mesa_str.split(" - ")[0])
+        else:
+            messagebox.showwarning("Advertencia", "Seleccione una mesa válida.")
+            return
+
+        if " - " in empleado_str:
+            empleado_id = int(empleado_str.split(" - ")[0])
+        else:
+            messagebox.showwarning("Advertencia", "Seleccione un empleado válido.")
+            return
+
+        if not fecha_reserva or not hora_reserva or not numero_personas:
+            messagebox.showwarning("Advertencia", "Todos los campos son obligatorios.")
+            return
+
+        try:
+            fecha_reserva_dt = datetime.strptime(fecha_reserva, "%Y-%m-%d").date()
+        except ValueError:
+            messagebox.showwarning("Advertencia", "Formato de fecha incorrecto. Debe ser YYYY-MM-DD.")
+            return
+
+        reserva = Reserva(reserva_id=reserva_id, cliente_id=cliente_id, mesa_id=mesa_id, empleado_id=empleado_id, fecha_reserva=fecha_reserva_dt,
+                          hora_reserva=hora_reserva, numero_personas=int(numero_personas))
+        try:
+            reserva.save()
+            messagebox.showinfo("Éxito", "Reserva actualizada correctamente.")
+            self.clear_reserva_entries()
+            self.load_reservas()
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error al actualizar la reserva:\n{e}")
+
+    def delete_reserva(self):
+        selected_item = self.reservas_tree.focus()
+        if not selected_item:
+            messagebox.showwarning("Advertencia", "Seleccione una reserva para eliminar.")
+            return
+
+        reserva_id = self.reservas_tree.item(selected_item)['values'][0]
+        confirm = messagebox.askyesno("Confirmar", "¿Está seguro de eliminar esta reserva?")
+        if confirm:
+            reserva = Reserva(reserva_id=reserva_id)
+            try:
+                reserva.delete()
+                messagebox.showinfo("Éxito", "Reserva eliminada correctamente.")
+                self.clear_reserva_entries()
+                self.load_reservas()
+            except Exception as e:
+                messagebox.showerror("Error", f"Ocurrió un error al eliminar la reserva:\n{e}")
+
+    def on_reserva_select(self, event):
+        selected_item = self.reservas_tree.focus()
+        if selected_item:
+            reserva_data = self.reservas_tree.item(selected_item)['values']
+
+            self.selected_cliente.set(reserva_data[1])
+            self.selected_mesa.set(reserva_data[2])
+            self.selected_empleado.set(reserva_data[3])
+
+            self.fecha_reserva_entry.delete(0, tk.END)
+            self.fecha_reserva_entry.insert(0, reserva_data[4])
+            self.hora_reserva_entry.delete(0, tk.END)
+            self.hora_reserva_entry.insert(0, reserva_data[5])
+            self.numero_personas_entry.delete(0, tk.END)
+            self.numero_personas_entry.insert(0, reserva_data[6])
+
+    def clear_reserva_entries(self):
+        self.fecha_reserva_entry.delete(0, tk.END)
+        self.hora_reserva_entry.delete(0, tk.END)
+        self.numero_personas_entry.delete(0, tk.END)
+        self.cliente_combobox.set("Seleccione un Cliente")
+        self.mesa_combobox.set("Seleccione una Mesa")
+        self.empleado_combobox.set("Seleccione un Empleado")
+        self.reservas_tree.selection_remove(self.reservas_tree.selection())
+
+    def load_reservas(self):
+        for item in self.reservas_tree.get_children():
+            self.reservas_tree.delete(item)
+        reservas = Reserva.get_all()
+        for reserva in reservas:
+            self.reservas_tree.insert('', tk.END, values=(reserva[0], reserva[1], reserva[2], reserva[3], reserva[4], reserva[5], reserva[6]))
 
     # Métodos para Menús
     def setup_menus_tab(self):
@@ -1240,7 +1277,6 @@ class App(ctk.CTk):
             self.menus_tree.insert('', tk.END, values=(menu.menu_id, menu.nombre_plato, menu.descripcion, menu.precio))
 
     # Métodos para Pedidos
-    # Métodos para Pedidos
     def setup_pedidos_tab(self):
         frame = ctk.CTkFrame(master=self.pedidos_tab)
         frame.pack(pady=20, padx=60, fill="both", expand=True)
@@ -1290,7 +1326,6 @@ class App(ctk.CTk):
         self.load_pedidos()
         self.update_pedido_comboboxes()
         self.pedidos_tree.bind("<<TreeviewSelect>>", self.on_pedido_select)
-
 
     def update_pedido_comboboxes(self):
         reservas = Reserva.get_all()
