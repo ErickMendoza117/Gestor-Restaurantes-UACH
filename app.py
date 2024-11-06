@@ -1,5 +1,5 @@
 import customtkinter as ctk
-import cx_Oracle
+import oracledb as cx_Oracle 
 import tkinter as tk
 from tkinter import ttk  # Importamos ttk para usar Treeview
 import tkinter.messagebox as messagebox
@@ -9,7 +9,7 @@ from datetime import datetime
 def get_connection():
     try:
         dsn_tns = cx_Oracle.makedsn('localhost', 1521, service_name='XEPDB1')  # Ajusta según tu configuración
-        connection = cx_Oracle.connect(user='gr', password='gr', dsn=dsn_tns)
+        connection = cx_Oracle.connect(user='gr3', password='gr3', dsn=dsn_tns)
         return connection
     except Exception as e:
         print(f"Error al conectar a la base de datos: {e}")
